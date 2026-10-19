@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nauka Słówek - Język Niemiecki</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .flip-card {
+            perspective: 1000px;
+        }
+        .flip-card-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flip-card.flipped .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            backface-visibility: hidden;
+        }
+        .flip-card-back {
+            transform: rotateY(180deg);
+        }
+        .custom-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-graduation-cap text-2xl sm:text-3xl text-indigo-200"></i>
+                <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Niemiecki - Słówka</h1>
+            </div>
+            <div class="flex items-center space-x-2 text-xs sm:text-sm bg-indigo-700/60 px-3 py-1.5 rounded-lg border border-indigo-500/30">
+                <span id="learned-count-badge" class="font-semibold text-emerald-300">0</span>
+                <span>/</span>
+                <span id="total-words-badge">44</span>
+                <span class="text-indigo-200">opanowane</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl mx-auto w-full px-4 py-6 flex-grow flex flex-col">
+
+        <!-- Controls / Filters Panel -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Category Filter -->
+            <div class="flex items-center space-x-2 w-full sm:w-auto">
+                <label for="category-select" class="text-sm font-medium text-slate-600 whitespace-nowrap">Zakres:</label>
+                <select id="category-select" class="bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2">
+                    <option value="all">Wszystkie słówka (44)</option>
+                    <option value="nouns">Rzeczowniki z rodzajnikami (29)</option>
+                    <option value="verbs">Czasowniki i wyrażenia (15)</option>
+                </select>
+            </div>
+
+            <!-- Direction Switch -->
+            <div class="flex items-center space-x-2 w-full sm:w-auto">
+                <label for="direction-select" class="text-sm font-medium text-slate-600 whitespace-nowrap">Kierunek:</label>
+                <select id="direction-select" class="bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2">
+                    <option value="pl-de" selected>Polski ➔ Niemiecki (Domyślny)</option>
+                    <option value="de-pl">Niemiecki ➔ Polski</option>
+                    <option value="mixed">Mieszany</option>
+                </select>
+            </div>
+
+            <!-- Mode Selector Tabs -->
+            <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200 w-full sm:w-auto justify-stretch">
+                <button id="tab-quiz" onclick="switchMode('quiz')" class="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all bg-white text-indigo-600 shadow-sm">
+                    <i class="fa-solid fa-list-check mr-1.5"></i>Quiz ABC
+                </button>
+                <button id="tab-typing" onclick="switchMode('typing')" class="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-md transition-all">
+                    <i class="fa-solid fa-keyboard mr-1.5"></i>Wpisywanie
+                </button>
+                <button id="tab-flashcards" onclick="switchMode('flashcards')" class="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-md transition-all">
+                    <i class="fa-solid fa-clone mr-1.5"></i>Fiszki
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Dynamic Game Container -->
+        <div id="game-container" class="flex-grow flex flex-col justify-center">
+
+            <!-- QUIZ ABC MODE -->
+            <div id="quiz-view" class="bg-white rounded-2xl p-6 sm:p-8 custom-shadow border border-slate-100 flex flex-col justify-between min-h-[420px]">
+                
+                <!-- Stats & Progress Bar -->
+                <div>
+                    <div class="flex justify-between items-center text-xs sm:text-sm text-slate-500 font-medium mb-2">
+                        <span>Pytanie <span id="quiz-current-num" class="text-indigo-600 font-bold">1</span> z <span id="quiz-total-num">10</span></span>
+                        <span>Wynik: <span id="quiz-score" class="text-emerald-600 font-bold">0</span></span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2 mb-6 overflow-hidden">
+                        <div id="quiz-progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 10%"></div>
+                    </div>
+
+                    <!-- Question Box -->
+                    <div class="text-center py-6 px-4 bg-slate-50 rounded-xl border border-slate-200/60 mb-6 relative">
+                        <span id="quiz-direction-tag" class="absolute top-2 left-3 text-[10px] uppercase font-bold tracking-wider text-slate-400">PL ➔ DE</span>
+                        <h2 id="quiz-question-text" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-2">odtwarzacz MP3</h2>
+                        <button id="quiz-audio-btn" onclick="speakCurrentWord()" class="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-colors">
+                            <i class="fa-solid fa-volume-high mr-1.5"></i> Posłuchaj (DE)
+                        </button>
+                    </div>
+
+                    <!-- Options Grid -->
+                    <div id="quiz-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+                        <!-- Dynamic Options generated by JS -->
+                    </div>
+                </div>
+
+                <!-- Feedback & Next Button Footer -->
+                <div id="quiz-footer" class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between min-h-[60px]">
+                    <div id="quiz-feedback" class="text-sm sm:text-base font-semibold hidden flex items-center gap-2">
+                        <!-- Dynamic Feedback Message -->
+                    </div>
+                    <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="hidden ml-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2">
+                        <span>Następne</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- TYPING MODE -->
+            <div id="typing-view" class="hidden bg-white rounded-2xl p-6 sm:p-8 custom-shadow border border-slate-100 flex flex-col justify-between min-h-[420px]">
+                
+                <div>
+                    <div class="flex justify-between items-center text-xs sm:text-sm text-slate-500 font-medium mb-2">
+                        <span>Wpisywanie <span id="typing-current-num" class="text-indigo-600 font-bold">1</span> z <span id="typing-total-num">10</span></span>
+                        <span>Wynik: <span id="typing-score" class="text-emerald-600 font-bold">0</span></span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2 mb-6 overflow-hidden">
+                        <div id="typing-progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 10%"></div>
+                    </div>
+
+                    <!-- Question Box -->
+                    <div class="text-center py-6 px-4 bg-slate-50 rounded-xl border border-slate-200/60 mb-6 relative">
+                        <span id="typing-direction-tag" class="absolute top-2 left-3 text-[10px] uppercase font-bold tracking-wider text-slate-400">PL ➔ DE</span>
+                        <h2 id="typing-question-text" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-2">pralka</h2>
+                        <button id="typing-audio-btn" onclick="speakCurrentWord()" class="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition-colors">
+                            <i class="fa-solid fa-volume-high mr-1.5"></i> Posłuchaj (DE)
+                        </button>
+                    </div>
+
+                    <!-- Special Character Quick Buttons for German -->
+                    <div id="german-chars" class="flex justify-center gap-1.5 mb-3 hidden">
+                        <button onclick="insertChar('ä')" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded border border-slate-300 text-sm">ä</button>
+                        <button onclick="insertChar('ö')" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded border border-slate-300 text-sm">ö</button>
+                        <button onclick="insertChar('ü')" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded border border-slate-300 text-sm">ü</button>
+                        <button onclick="insertChar('ß')" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded border border-slate-300 text-sm">ß</button>
+                        <button onclick="insertChar('Ä')" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded border border-slate-300 text-sm">Ä</button>
+                        <button onclick="insertChar('Ö')" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded border border-slate-300 text-sm">Ö</button>
+                        <button onclick="insertChar('Ü')" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded border border-slate-300 text-sm">Ü</button>
+                    </div>
+
+                    <!-- Input Form -->
+                    <form id="typing-form" onsubmit="checkTypingAnswer(event)" class="space-y-4">
+                        <div>
+                            <input type="text" id="typing-input" autocomplete="off" placeholder="Wpisz tłumaczenie..." class="w-full text-center text-lg p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                        </div>
+                        <button type="submit" id="typing-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-sm transition-colors">
+                            Sprawdź odpowiedź
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Feedback Footer -->
+                <div id="typing-footer" class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between min-h-[60px]">
+                    <div id="typing-feedback" class="text-sm sm:text-base font-semibold hidden flex items-center gap-2">
+                        <!-- Dynamic Feedback -->
+                    </div>
+                    <button id="typing-next-btn" onclick="nextTypingQuestion()" class="hidden ml-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2">
+                        <span>Następne</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- FLASHCARDS MODE -->
+            <div id="flashcards-view" class="hidden flex flex-col items-center justify-center space-y-6">
+                
+                <div class="text-xs sm:text-sm text-slate-500 font-medium">
+                    Fiszka <span id="flash-current-num" class="text-indigo-600 font-bold">1</span> z <span id="flash-total-num">44</span>
+                </div>
+
+                <!-- Card Container -->
+                <div id="flashcard" onclick="flipCard()" class="flip-card w-full max-w-md h-64 cursor-pointer select-none">
+                    <div class="flip-card-inner relative w-full h-full rounded-2xl custom-shadow border border-slate-200/80 bg-white">
+                        
+                        <!-- Front Side -->
+                        <div class="flip-card-front absolute inset-0 flex flex-col items-center justify-center p-6 text-center rounded-2xl bg-gradient-to-b from-white to-slate-50">
+                            <span id="flash-front-tag" class="absolute top-4 left-4 text-[10px] uppercase font-bold tracking-wider text-slate-400">Polski</span>
+                            <button onclick="event.stopPropagation(); speakCurrentWord();" class="absolute top-4 right-4 text-indigo-500 hover:text-indigo-700 p-2 text-lg" title="Posłuchaj po niemiecku">
+                                <i class="fa-solid fa-volume-high"></i>
+                            </button>
+                            <h3 id="flash-front-text" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-3">ekspres do kawy</h3>
+                            <p class="text-xs text-slate-400 mt-2"><i class="fa-solid fa-rotate mr-1"></i> Kliknij, aby odwrócić</p>
+                        </div>
+
+                        <!-- Back Side -->
+                        <div class="flip-card-back absolute inset-0 flex flex-col items-center justify-center p-6 text-center rounded-2xl bg-indigo-600 text-white">
+                            <span id="flash-back-tag" class="absolute top-4 left-4 text-[10px] uppercase font-bold tracking-wider text-indigo-200">Niemiecki</span>
+                            <h3 id="flash-back-text" class="text-2xl sm:text-3xl font-extrabold mb-3">die Kaffeemaschine</h3>
+                            <p class="text-xs text-indigo-200 mt-2"><i class="fa-solid fa-rotate mr-1"></i> Kliknij, aby odwrócić</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex items-center space-x-4">
+                    <button onclick="prevFlashcard()" class="p-3 bg-white hover:bg-slate-100 text-slate-700 rounded-full border border-slate-200 shadow-sm transition-colors">
+                        <i class="fa-solid fa-arrow-left text-lg"></i>
+                    </button>
+                    <button onclick="speakCurrentWord()" class="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-medium rounded-xl text-sm transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-volume-high"></i> Wymowa
+                    </button>
+                    <button onclick="nextFlashcard()" class="p-3 bg-white hover:bg-slate-100 text-slate-700 rounded-full border border-slate-200 shadow-sm transition-colors">
+                        <i class="fa-solid fa-arrow-right text-lg"></i>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- RESULT SUMMARY VIEW -->
+            <div id="result-view" class="hidden bg-white rounded-2xl p-8 custom-shadow border border-slate-100 text-center space-y-6">
+                <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-3xl">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Koniec serii!</h2>
+                    <p class="text-slate-500 mt-1">Oto Twój wynik:</p>
+                </div>
+                <div class="text-4xl font-extrabold text-indigo-600" id="result-score-text">
+                    8 / 10
+                </div>
+                <p id="result-message" class="text-sm font-medium text-slate-600">
+                    Świetny wynik! Dobra robota!
+                </p>
+                <div class="pt-4 flex justify-center gap-3">
+                    <button onclick="restartCurrentMode()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-sm transition-colors">
+                        Zagraj jeszcze raz
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-auto">
+        Aplikacja do nauki słownictwa niemieckiego &bull; 44 słówka i wyrażenia
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Full Dataset extracted from the two images
+        const vocabulary = [
+            // Image 1: Nouns with articles
+            { id: 1, de: "der MP-3 Player", pl: "odtwarzacz MP3", category: "nouns" },
+            { id: 2, de: "die Stereoanlage", pl: "głośnik", category: "nouns", plAlt: ["wieża", "wieża stereo"] },
+            { id: 3, de: "der Computer", pl: "komputer", category: "nouns" },
+            { id: 4, de: "die Zahnpasta", pl: "pasta do zębów", category: "nouns" },
+            { id: 5, de: "die Jeans", pl: "dżinsy", category: "nouns", plAlt: ["jeansy"] },
+            { id: 6, de: "der Buchdruck", pl: "druk książek", category: "nouns" },
+            { id: 7, de: "der Fernseher", pl: "telewizor", category: "nouns" },
+            { id: 8, de: "die Schallplatte", pl: "płyta", category: "nouns", plAlt: ["płyta winylowa"] },
+            { id: 9, de: "das Aspirin", pl: "aspiryna", category: "nouns" },
+            { id: 10, de: "die Röntgenstrahlung", pl: "rentgen", category: "nouns", plAlt: ["promieniowanie rentgenowskie"] },
+            { id: 11, de: "das Automobil", pl: "auto", category: "nouns", plAlt: ["samochód"] },
+            { id: 12, de: "die Kaffeemaschine", pl: "ekspres do kawy", category: "nouns" },
+            { id: 13, de: "die Spülmaschine", pl: "zmywarka", category: "nouns" },
+            { id: 14, de: "die Waschmaschine", pl: "pralka", category: "nouns" },
+            { id: 15, de: "das Bügeleisen", pl: "żelazko", category: "nouns" },
+            { id: 16, de: "der Elektroherd", pl: "kuchenka elektryczna", category: "nouns" },
+            { id: 17, de: "der Föhn", pl: "suszarka do włosów", category: "nouns" },
+            { id: 18, de: "der Haarglätter", pl: "prostownica", category: "nouns" },
+            { id: 19, de: "der Kühlschrank", pl: "lodówka", category: "nouns" },
+            { id: 20, de: "die Mikrowelle", pl: "mikrofalówka", category: "nouns" },
+            { id: 21, de: "der Toaster", pl: "toster", category: "nouns" },
+            { id: 22, de: "der Staubsauger", pl: "odkurzacz", category: "nouns" },
+            { id: 23, de: "der Wäschetrockner", pl: "suszarka do ubrań", category: "nouns" },
+            { id: 24, de: "der Wasserkocher", pl: "czajnik", category: "nouns" },
+            { id: 25, de: "der Mixer", pl: "mikser", category: "nouns" },
+            { id: 26, de: "der Dampfgarer", pl: "parownica", category: "nouns" },
+            { id: 27, de: "der Drucker", pl: "drukarka", category: "nouns" },
+            { id: 28, de: "der DVD Player", pl: "odtwarzacz DVD", category: "nouns" },
+            { id: 29, de: "der Kopierer", pl: "kopiarka", category: "nouns" },
+
+            // Image 2: Verbs & Expressions
+            { id: 30, de: "Essen aufwärmen", pl: "podgrzać posiłek", category: "verbs", plAlt: ["podgrzewać posiłek", "podgrzać jedzenie"] },
+            { id: 31, de: "Kaffee kochen", pl: "zaparzyć kawę", category: "verbs", plAlt: ["gotować kawę", "robić kawę"] },
+            { id: 32, de: "kochen", pl: "gotować", category: "verbs" },
+            { id: 33, de: "Geschirr spülen", pl: "zmywać naczynia", category: "verbs", plAlt: ["zmyć naczynia"] },
+            { id: 34, de: "Brot rösten", pl: "piec chleb", category: "verbs", plAlt: ["opiekać chleb"] },
+            { id: 35, de: "Kleidung bügeln", pl: "prasować ubrania", category: "verbs" },
+            { id: 36, de: "Haare glätten", pl: "wygładzać włosy", category: "verbs", plAlt: ["prostować włosy"] },
+            { id: 37, de: "Haare trocknen", pl: "suszyć włosy", category: "verbs" },
+            { id: 38, de: "Essen aufbewahren", pl: "przechowywać jedzenie", category: "verbs", plAlt: ["przechowywać posiłek"] },
+            { id: 39, de: "Staub saugen", pl: "odkurzać", category: "verbs" },
+            { id: 40, de: "Wäsche trocknen", pl: "prać na sucho", category: "verbs", plAlt: ["suszyć pranie"] },
+            { id: 41, de: "mixen", pl: "miksować", category: "verbs" },
+            { id: 42, de: "unter Dampf kochen", pl: "gotować pod ciśnieniem", category: "verbs", plAlt: ["gotować na parze"] },
+            { id: 43, de: "drucken", pl: "drukować", category: "verbs" },
+            { id: 44, de: "kopieren", pl: "kopiować", category: "verbs" }
+        ];
+
+        // State variables
+        let currentMode = 'quiz'; // 'quiz', 'typing', 'flashcards'
+        let currentPool = [...vocabulary];
+        let quizQueue = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let isAnswered = false;
+        let currentDirection = 'pl-de'; // Default direction set to PL -> DE
+        let learnedWords = new Set();
+
+        // DOM Elements
+        const categorySelect = document.getElementById('category-select');
+        const directionSelect = document.getElementById('direction-select');
+        const gameContainer = document.getElementById('game-container');
+
+        // Initialize App
+        window.onload = () => {
+            categorySelect.addEventListener('change', resetAndInit);
+            directionSelect.addEventListener('change', resetAndInit);
+            resetAndInit();
+        };
+
+        function resetAndInit() {
+            filterPool();
+            initCurrentMode();
+            updateLearnedBadge();
+        }
+
+        // Filter words based on selected category
+        function filterPool() {
+            const cat = categorySelect.value;
+            if (cat === 'all') {
+                currentPool = [...vocabulary];
+            } else {
+                currentPool = vocabulary.filter(w => w.category === cat);
+            }
+            // Shuffle array
+            currentPool = currentPool.sort(() => Math.random() - 0.5);
+        }
+
+        // Switch Tabs
+        function switchMode(mode) {
+            currentMode = mode;
+            ['quiz', 'typing', 'flashcards'].forEach(m => {
+                const btn = document.getElementById(`tab-${m}`);
+                const view = document.getElementById(`${m}-view`);
+                if (m === mode) {
+                    btn.className = "flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all bg-white text-indigo-600 shadow-sm";
+                    view.classList.remove('hidden');
+                } else {
+                    btn.className = "flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 hover:text-indigo-600 rounded-md transition-all";
+                    view.classList.add('hidden');
+                }
+            });
+            document.getElementById('result-view').classList.add('hidden');
+            initCurrentMode();
+        }
+
+        function initCurrentMode() {
+            score = 0;
+            currentQuestionIndex = 0;
+            quizQueue = [...currentPool];
+
+            if (currentMode === 'quiz') {
+                setupQuizQuestion();
+            } else if (currentMode === 'typing') {
+                setupTypingQuestion();
+            } else if (currentMode === 'flashcards') {
+                setupFlashcard();
+            }
+        }
+
+        function getQuestionDirection() {
+            const dirPref = directionSelect.value;
+            if (dirPref === 'mixed') {
+                return Math.random() > 0.5 ? 'de-pl' : 'pl-de';
+            }
+            return dirPref;
+        }
+
+        // --- QUIZ MODE LOGIC ---
+        function setupQuizQuestion() {
+            if (currentQuestionIndex >= quizQueue.length || currentQuestionIndex >= 15) {
+                showResults();
+                return;
+            }
+
+            isAnswered = false;
+            const currentWord = quizQueue[currentQuestionIndex];
+            const dir = getQuestionDirection();
+            currentDirection = dir;
+
+            const total = Math.min(quizQueue.length, 15);
+            document.getElementById('quiz-current-num').innerText = currentQuestionIndex + 1;
+            document.getElementById('quiz-total-num').innerText = total;
+            document.getElementById('quiz-score').innerText = score;
+            document.getElementById('quiz-progress-bar').style.width = `${((currentQuestionIndex) / total) * 100}%`;
+
+            const directionTag = document.getElementById('quiz-direction-tag');
+            const questionText = document.getElementById('quiz-question-text');
+            const optionsContainer = document.getElementById('quiz-options');
+            const feedback = document.getElementById('quiz-feedback');
+            const nextBtn = document.getElementById('quiz-next-btn');
+
+            feedback.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+            optionsContainer.innerHTML = '';
+
+            let questionPrompt = "";
+            let correctAnswer = "";
+
+            if (dir === 'pl-de') {
+                directionTag.innerText = "Polski ➔ Niemiecki";
+                questionPrompt = currentWord.pl;
+                correctAnswer = currentWord.de;
+            } else {
+                directionTag.innerText = "Niemiecki ➔ Polski";
+                questionPrompt = currentWord.de;
+                correctAnswer = currentWord.pl;
+            }
+
+            questionText.innerText = questionPrompt;
+
+            // Generate 4 Distractors
+            let choices = [correctAnswer];
+            let otherWords = vocabulary.filter(w => w.id !== currentWord.id);
+            otherWords = otherWords.sort(() => Math.random() - 0.5);
+
+            for (let i = 0; i < 3 && i < otherWords.length; i++) {
+                choices.push(dir === 'pl-de' ? otherWords[i].de : otherWords[i].pl);
+            }
+            choices = choices.sort(() => Math.random() - 0.5);
+
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all font-medium text-slate-700 flex items-center justify-between group";
+                btn.innerHTML = `<span>${choice}</span><i class="fa-regular fa-circle text-slate-300 group-hover:text-indigo-400"></i>`;
+                btn.onclick = () => handleQuizAnswer(choice, correctAnswer, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function handleQuizAnswer(selected, correct, selectedBtn) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const optionsContainer = document.getElementById('quiz-options');
+            const buttons = optionsContainer.querySelectorAll('button');
+            const feedback = document.getElementById('quiz-feedback');
+            const nextBtn = document.getElementById('quiz-next-btn');
+
+            const isCorrect = (selected === correct);
+
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                const text = btn.querySelector('span').innerText;
+                if (text === correct) {
+                    btn.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold flex items-center justify-between";
+                    btn.querySelector('i').className = "fa-solid fa-circle-check text-emerald-600 text-lg";
+                } else if (btn === selectedBtn && !isCorrect) {
+                    btn.className = "w-full text-left p-4 rounded-xl border-2 border-rose-500 bg-rose-50 text-rose-800 font-semibold flex items-center justify-between";
+                    btn.querySelector('i').className = "fa-solid fa-circle-xmark text-rose-600 text-lg";
+                } else {
+                    btn.className = "w-full text-left p-4 rounded-xl border border-slate-200 opacity-50 text-slate-500 flex items-center justify-between";
+                }
+            });
+
+            feedback.classList.remove('hidden');
+            if (isCorrect) {
+                score++;
+                learnedWords.add(quizQueue[currentQuestionIndex].id);
+                document.getElementById('quiz-score').innerText = score;
+                feedback.className = "text-sm sm:text-base font-semibold text-emerald-600 flex items-center gap-2";
+                feedback.innerHTML = `<i class="fa-solid fa-circle-check text-lg"></i> Brawo! Poprawna odpowiedź.`;
+            } else {
+                feedback.className = "text-sm sm:text-base font-semibold text-rose-600 flex items-center gap-2";
+                feedback.innerHTML = `<i class="fa-solid fa-circle-xmark text-lg"></i> Błąd! Poprawnie: <span class="underline font-bold text-slate-800">${correct}</span>`;
+            }
+
+            updateLearnedBadge();
+            nextBtn.classList.remove('hidden');
+        }
+
+        function nextQuizQuestion() {
+            currentQuestionIndex++;
+            setupQuizQuestion();
+        }
+
+        // --- TYPING MODE LOGIC ---
+        function setupTypingQuestion() {
+            if (currentQuestionIndex >= quizQueue.length || currentQuestionIndex >= 15) {
+                showResults();
+                return;
+            }
+
+            isAnswered = false;
+            const currentWord = quizQueue[currentQuestionIndex];
+            const dir = getQuestionDirection();
+            currentDirection = dir;
+
+            const total = Math.min(quizQueue.length, 15);
+            document.getElementById('typing-current-num').innerText = currentQuestionIndex + 1;
+            document.getElementById('typing-total-num').innerText = total;
+            document.getElementById('typing-score').innerText = score;
+            document.getElementById('typing-progress-bar').style.width = `${((currentQuestionIndex) / total) * 100}%`;
+
+            const directionTag = document.getElementById('typing-direction-tag');
+            const questionText = document.getElementById('typing-question-text');
+            const input = document.getElementById('typing-input');
+            const feedback = document.getElementById('typing-feedback');
+            const nextBtn = document.getElementById('typing-next-btn');
+            const submitBtn = document.getElementById('typing-submit-btn');
+            const germanChars = document.getElementById('german-chars');
+
+            input.value = '';
+            input.disabled = false;
+            input.className = "w-full text-center text-lg p-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all";
+            submitBtn.classList.remove('hidden');
+            feedback.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+
+            if (dir === 'pl-de') {
+                directionTag.innerText = "Polski ➔ Niemiecki";
+                questionText.innerText = currentWord.pl;
+                germanChars.classList.remove('hidden'); // Show ä ö ü buttons for DE typing
+            } else {
+                directionTag.innerText = "Niemiecki ➔ Polski";
+                questionText.innerText = currentWord.de;
+                germanChars.classList.add('hidden');
+            }
+
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function checkTypingAnswer(e) {
+            e.preventDefault();
+            if (isAnswered) return;
+
+            const input = document.getElementById('typing-input');
+            const userVal = input.value.trim().toLowerCase();
+            const currentWord = quizQueue[currentQuestionIndex];
+            const dir = currentDirection;
+
+            if (!userVal) return;
+
+            isAnswered = true;
+            input.disabled = true;
+
+            const feedback = document.getElementById('typing-feedback');
+            const nextBtn = document.getElementById('typing-next-btn');
+            const submitBtn = document.getElementById('typing-submit-btn');
+
+            let targetAnswer = (dir === 'de-pl' ? currentWord.pl : currentWord.de);
+            let validAnswers = [targetAnswer.toLowerCase()];
+
+            if (dir === 'de-pl' && currentWord.plAlt) {
+                validAnswers.push(...currentWord.plAlt.map(a => a.toLowerCase()));
+            }
+
+            // Normalize strings (ignore extra spaces)
+            const cleanUser = userVal.replace(/\s+/g, ' ');
+            const isCorrect = validAnswers.some(ans => ans.replace(/\s+/g, ' ') === cleanUser);
+
+            submitBtn.classList.add('hidden');
+            feedback.classList.remove('hidden');
+
+            if (isCorrect) {
+                score++;
+                learnedWords.add(currentWord.id);
+                document.getElementById('typing-score').innerText = score;
+                input.className = "w-full text-center text-lg p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-800 font-bold outline-none";
+                feedback.className = "text-sm sm:text-base font-semibold text-emerald-600 flex items-center gap-2";
+                feedback.innerHTML = `<i class="fa-solid fa-circle-check text-lg"></i> Doskonale!`;
+            } else {
+                input.className = "w-full text-center text-lg p-3 rounded-xl border-2 border-rose-500 bg-rose-50 text-rose-800 font-bold outline-none";
+                feedback.className = "text-sm sm:text-base font-semibold text-rose-600 flex items-center gap-2";
+                feedback.innerHTML = `<i class="fa-solid fa-circle-xmark text-lg"></i> Błąd! Poprawna odpowiedź: <span class="underline font-bold text-slate-800">${targetAnswer}</span>`;
+            }
+
+            updateLearnedBadge();
+            nextBtn.classList.remove('hidden');
+        }
+
+        function nextTypingQuestion() {
+            currentQuestionIndex++;
+            setupTypingQuestion();
+        }
+
+        function insertChar(char) {
+            const input = document.getElementById('typing-input');
+            input.value += char;
+            input.focus();
+        }
+
+        // --- FLASHCARDS MODE LOGIC ---
+        function setupFlashcard() {
+            if (quizQueue.length === 0) return;
+
+            const currentWord = quizQueue[currentQuestionIndex];
+            const dir = directionSelect.value === 'de-pl' ? 'de-pl' : 'pl-de';
+
+            document.getElementById('flash-current-num').innerText = currentQuestionIndex + 1;
+            document.getElementById('flash-total-num').innerText = quizQueue.length;
+
+            const flashcard = document.getElementById('flashcard');
+            flashcard.classList.remove('flipped');
+
+            if (dir === 'pl-de') {
+                document.getElementById('flash-front-tag').innerText = "Polski";
+                document.getElementById('flash-front-text').innerText = currentWord.pl;
+                document.getElementById('flash-back-tag').innerText = "Niemiecki";
+                document.getElementById('flash-back-text').innerText = currentWord.de;
+            } else {
+                document.getElementById('flash-front-tag').innerText = "Niemiecki";
+                document.getElementById('flash-front-text').innerText = currentWord.de;
+                document.getElementById('flash-back-tag').innerText = "Polski";
+                document.getElementById('flash-back-text').innerText = currentWord.pl;
+            }
+        }
+
+        function restartCurrentMode() {
+            document.getElementById('result-view').classList.add('hidden');
+            filterPool();
+            switchMode(currentMode);
+        }
+
+        // --- AUDIO SPEECH SYNTHESIS ---
+        function speakWord(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop current speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'de-DE';
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function speakCurrentWord() {
+            if (quizQueue.length === 0) return;
+            const word = quizQueue[currentQuestionIndex];
+            speakWord(word.de);
+        }
+
+        function updateLearnedBadge() {
+            document.getElementById('learned-count-badge').innerText = learnedWords.size;
+            document.getElementById('total-words-badge').innerText = vocabulary.length;
+        }
+    </script>
+</body>
+</html>
